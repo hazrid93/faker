@@ -964,9 +964,12 @@ export class SimpleHelpersModule extends SimpleModuleBase {
    * @param array Array to pick the value from.
    * @param array[].weight The weight of the value.
    * @param array[].value The value to pick.
+   * @param options The options to use.
+   * @param options.lazy When `true` and the selected value is a function, the function is invoked with no arguments and its return value is used instead of the function itself. This lets callers lazily generate the selected item, for example another faker call. Defaults to `false`, so functions are returned as-is, preserving the existing behaviour. See issue #3442.
    *
    * @example
    * faker.helpers.weightedArrayElement([{ weight: 5, value: 'sunny' }, { weight: 4, value: 'rainy' }, { weight: 1, value: 'snowy' }]) // 'sunny', 50% of the time, 'rainy' 40% of the time, 'snowy' 10% of the time
+   * faker.helpers.weightedArrayElement([{ weight: 1, value: () => 'lazy' }], { lazy: true }) // 'lazy'
    *
    * @since 8.0.0
    */
@@ -980,7 +983,13 @@ export class SimpleHelpersModule extends SimpleModuleBase {
        * The value to pick.
        */
       value: T;
-    }>
+    }>,
+    options?: {
+      /**
+       * When `true` and the selected value is a function, the function is invoked with no arguments and its return value is used instead of the function itself. This lets callers lazily generate the selected item, for example another faker call. Defaults to `false`, so functions are returned as-is, preserving the existing behaviour. See issue #3442.
+       */
+      lazy?: boolean;
+    }
   ): T {
     if (array.length === 0) {
       throw new FakerError(
@@ -994,6 +1003,10 @@ export class SimpleHelpersModule extends SimpleModuleBase {
       );
     }
 
+    const lazy = options?.lazy ?? false;
+    const resolve = (value: T): T =>
+      lazy && typeof value === 'function' ? (value as () => T)() : value;
+
     const total = array.reduce((sum, { weight }) => sum + weight, 0);
     const random = this.faker.number.float({
       min: 0,
@@ -1003,13 +1016,13 @@ export class SimpleHelpersModule extends SimpleModuleBase {
     for (const { weight, value } of array) {
       current += weight;
       if (random < current) {
-        return value;
+        return resolve(value);
       }
     }
 
     // In case of rounding errors, return the last element
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    return array.at(-1)!.value;
+    return resolve(array.at(-1)!.value);
   }
 
   /**

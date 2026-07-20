@@ -297,6 +297,37 @@ describe('helpers', () => {
           expect(actual).toBe(false);
         });
 
+        it('should return function values as-is by default', () => {
+          const fn = () => 'lazy';
+          const testArray = [{ weight: 1, value: fn }];
+          const actual = faker.helpers.weightedArrayElement(testArray);
+          expect(actual).toBe(fn);
+        });
+
+        it('should invoke function values when lazy is set', () => {
+          const testArray = [{ weight: 1, value: () => 'lazy' }];
+          const actual = faker.helpers.weightedArrayElement(testArray, {
+            lazy: true,
+          });
+          expect(actual).toBe('lazy');
+        });
+
+        it('should invoke a function selected via the rounding-error fallback when lazy is set', () => {
+          const testArray = [{ weight: 1, value: () => 'fallback' }];
+          const actual = faker.helpers.weightedArrayElement(testArray, {
+            lazy: true,
+          });
+          expect(actual).toBe('fallback');
+        });
+
+        it('should return non-function values unchanged when lazy is set', () => {
+          const testArray = [{ weight: 1, value: 'plain' }];
+          const actual = faker.helpers.weightedArrayElement(testArray, {
+            lazy: true,
+          });
+          expect(actual).toBe('plain');
+        });
+
         it('should throw if any weight is zero', () => {
           const testArray = [
             { weight: 0, value: 'hello' },
